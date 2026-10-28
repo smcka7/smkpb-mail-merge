@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SMKPB Mail Merge</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <script src="vendor/msal-browser.min.js"></script>
+  <script src="config.js"></script>
+  <script src="merge.js"></script>
+  <link rel="stylesheet" href="taskpane.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="assets/icon-32.png" alt="" width="20" height="20">
+      <span>Mail Merge</span>
+    </div>
+    <div class="account" id="account">Not signed in</div>
+  </header>
+
+  <main>
+    <!-- 1. RECIPIENTS -->
+    <section class="step" id="step-recipients">
+      <h2><span class="num">1</span> Recipients</h2>
+      <p class="hint">Copy your table from Excel (include the header row) and paste it here, or upload a CSV.</p>
+      <textarea id="table-input" rows="5" spellcheck="false"
+        placeholder="Email&#9;First Name&#9;Company&#10;jane@acme.com&#9;Jane&#9;Acme Roofing"></textarea>
+      <div class="row">
+        <label class="btn btn-secondary file-btn">
+          Upload CSV
+          <input type="file" id="csv-file" accept=".csv,.tsv,.txt,text/csv">
+        </label>
+        <button class="btn btn-link" id="clear-table" type="button">Clear</button>
+      </div>
+
+      <div id="table-summary" class="summary" hidden>
+        <div class="summary-line" id="table-count"></div>
+        <div class="field-grid">
+          <label for="email-column">Email column</label>
+          <select id="email-column"></select>
+          <label for="cc-column">CC column</label>
+          <select id="cc-column"></select>
+          <label for="bcc-column">BCC column</label>
+          <select id="bcc-column"></select>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. MESSAGE -->
+    <section class="step" id="step-message">
+      <h2><span class="num">2</span> Message</h2>
+      <div id="field-chips" class="chips" hidden>
+        <span class="chips-label">Insert field:</span>
+      </div>
+      <label class="label" for="subject">Subject</label>
+      <input id="subject" type="text" placeholder="Bookkeeping help for {{Company}}">
+      <label class="label" for="body">Body</label>
+      <textarea id="body" rows="10" placeholder="Hi {{First Name|there}},&#10;&#10;..."></textarea>
+      <p class="hint">Use <code>{{Column Name}}</code> to fill in each person's details. Add a fallback with a bar: <code>{{First Name|there}}</code>.</p>
+
+      <details class="more" id="signature-details">
+        <summary>Signature</summary>
+        <textarea id="signature" rows="4" placeholder="Stephen McKay&#10;SMKPB — Payroll &amp; Bookkeeping&#10;smkpb.org"></textarea>
+        <p class="hint">Added under every email and saved for next time. Outlook's own signature isn't added to emails sent this way.</p>
+      </details>
+
+      <details class="more" id="attachment-details">
+        <summary>Attachment</summary>
+        <div class="row">
+          <label class="btn btn-secondary file-btn">
+            Choose file
+            <input type="file" id="attachment-file">
+          </label>
+          <button class="btn btn-link" id="remove-attachment" type="button" hidden>Remove</button>
+        </div>
+        <p class="hint" id="attachment-status">Optional. The same file goes to everyone (up to 2.5 MB).</p>
+      </details>
+    </section>
+
+    <!-- 3. PREVIEW -->
+    <section class="step" id="step-preview">
+      <h2><span class="num">3</span> Preview</h2>
+      <div id="messages" class="messages"></div>
+      <div id="preview" class="preview" hidden>
+        <div class="pager">
+          <button class="btn btn-icon" id="prev" type="button" aria-label="Previous person">&#8249;</button>
+          <span id="pager-label"></span>
+          <button class="btn btn-icon" id="next" type="button" aria-label="Next person">&#8250;</button>
+        </div>
+        <div class="preview-head">
+          <div><span class="k">To</span> <span id="pv-to"></span></div>
+          <div id="pv-cc-line" hidden><span class="k">Cc</span> <span id="pv-cc"></span></div>
+          <div id="pv-bcc-line" hidden><span class="k">Bcc</span> <span id="pv-bcc"></span></div>
+          <div><span class="k">Subject</span> <span id="pv-subject"></span></div>
+        </div>
+        <div id="pv-issue" class="issue" hidden></div>
+        <iframe id="pv-body" class="preview-body" sandbox title="Email preview"></iframe>
+      </div>
+    </section>
+
+    <!-- 4. SEND -->
+    <section class="step" id="step-send">
+      <h2><span class="num">4</span> Send</h2>
+      <div class="send-actions" id="send-actions">
+        <button class="btn btn-secondary" id="send-test" type="button" disabled>Send test to me</button>
+        <button class="btn btn-primary" id="send-all" type="button" disabled>Send</button>
+      </div>
+      <div class="confirm" id="confirm" hidden>
+        <p id="confirm-text"></p>
+        <div class="row">
+          <button class="btn btn-primary" id="confirm-yes" type="button">Yes, send</button>
+          <button class="btn btn-secondary" id="confirm-no" type="button">Cancel</button>
+        </div>
+      </div>
+      <div class="progress" id="progress" hidden>
+        <div class="bar"><div class="fill" id="progress-fill"></div></div>
+        <div class="row space">
+          <span id="progress-text"></span>
+          <button class="btn btn-link" id="stop" type="button">Stop</button>
+        </div>
+      </div>
+      <div class="results" id="results" hidden>
+        <div class="summary-line" id="results-summary"></div>
+        <ul id="results-list" class="results-list"></ul>
+        <div class="row">
+          <button class="btn btn-secondary" id="retry-failed" type="button" hidden>Retry failed</button>
+          <button class="btn btn-secondary" id="copy-results" type="button">Copy results</button>
+        </div>
+      </div>
+      <p class="hint" id="sent-history" hidden></p>
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+    </section>
+
+    <!-- SETTINGS -->
+    <details class="more settings" id="settings">
+      <summary>Settings</summary>
+      <label class="label" for="client-id">Application (client) ID</label>
+      <input id="client-id" type="text" spellcheck="false" placeholder="00000000-0000-0000-0000-000000000000">
+      <p class="hint">From the app you registered in Microsoft Entra. See the setup guide.</p>
+      <div class="row">
+        <button class="btn btn-secondary" id="save-settings" type="button">Save</button>
+        <button class="btn btn-secondary" id="sign-in" type="button">Sign in</button>
+      </div>
+    </details>
+  </main>
+
+  <script src="taskpane.js"></script>
+</body>
+</html>
