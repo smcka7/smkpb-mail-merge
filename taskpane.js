@@ -110,11 +110,16 @@
     if (err instanceof UserError) return err.message;
     const code = (err && (err.errorCode || err.code)) || "";
     const msg = (err && err.message) || String(err);
-    if (/user_cancelled|popup_window_error|cancel/i.test(code + msg)) return "Sign-in was cancelled.";
+    if (/popup_window_error|empty_window_error|popup.*block/i.test(code + msg)) {
+      return "The Microsoft sign-in window couldn't open (pop-up blocked). Allow pop-ups for Outlook, or open Outlook in Chrome, Edge or Safari and try again.";
+    }
+    if (/user_cancelled|cancel/i.test(code + msg)) {
+      return `Sign-in was cancelled before it finished${code ? ` (${code})` : ""}. Click Sign in again and approve the request in the Microsoft window.`;
+    }
     if (/AADSTS700016/.test(msg)) return "Microsoft doesn't recognize that Application (client) ID. Check it under Settings.";
     if (/AADSTS50011|redirect/i.test(msg)) return "The app registration is missing this add-in's redirect URI. See step 3 of the setup guide.";
     if (/AADSTS65001|consent/i.test(msg)) return "Permission to send mail hasn't been granted yet. See step 3 of the setup guide.";
-    return `Sign-in failed: ${msg}`;
+    return `Sign-in failed${code ? ` (${code})` : ""}: ${msg}`;
   }
 
   // ─── GRAPH ────────────────────────────────────────────────────────────────
