@@ -6,7 +6,7 @@
  * Settings section the first time you open it (it's saved to your mailbox and follows you).
  */
 window.MAIL_MERGE_CONFIG = {
-  clientId: "",
+  clientId: "2a85036d-dc60-4ac6-96b2-756eac80a618",
 
   // Pause between emails. Exchange Online allows 30 messages a minute per mailbox;
   // 2.4 seconds keeps you at about 25 a minute.
